@@ -1,3 +1,10 @@
+import sys
+import os
+
+# Add the project root directory to the Python path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(project_root)
+
 from transformers import Trainer, TrainingArguments
 from models.reformer_model import ReformerWithCustomEmbeddings
 from utils.data_utils import load_dataset
@@ -38,6 +45,10 @@ def train():
         eval_steps=5000,
         logging_dir='./logs',
         logging_steps=500,
+        logging_strategy="steps",  # Log at each step
+        logging_first_step=True,   # Log the first step
+        report_to="all",           # Report to all available integrations (e.g., console, TensorBoard)
+        load_best_model_at_end=True,  # Load the best model at the end of training
     )
 
     trainer = Trainer(
