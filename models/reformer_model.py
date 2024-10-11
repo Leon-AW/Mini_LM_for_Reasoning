@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 import torch.nn as nn
 from transformers import ReformerConfig, ReformerModel
@@ -10,9 +9,6 @@ embeddings_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'embed
 
 # Load the Word2Vec model using the full path
 word2vec_model = Word2Vec.load(os.path.join(embeddings_dir, "wikitext103_word2vec.model"))
-
-# Manually load vectors if needed
-vectors = np.load(os.path.join(embeddings_dir, "wikitext103_word2vec.model.wv.vectors.npy"), allow_pickle=True)
 
 # Create an embedding matrix
 vocab = word2vec_model.wv.key_to_index

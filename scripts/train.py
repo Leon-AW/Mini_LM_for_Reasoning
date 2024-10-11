@@ -5,7 +5,7 @@ import os
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(project_root)
 
-from transformers import Trainer, TrainingArguments, ReformerTokenizer
+from transformers import Trainer, TrainingArguments, ReformerTokenizerFast
 from models.reformer_model import ReformerWithCustomEmbeddings
 from utils.data_utils import load_dataset
 import torch
@@ -34,8 +34,8 @@ def train():
 
     model = get_reformer_model().to(device)  # Move model to GPU if available
 
-    # Initialize the tokenizer
-    tokenizer = ReformerTokenizer.from_pretrained('google/reformer-enwik8')  # Example tokenizer
+    # Load a pre-trained fast tokenizer
+    tokenizer = ReformerTokenizerFast.from_pretrained('google/reformer-enwik8')
 
     train_dataset, val_dataset = load_dataset(tokenizer)
 
