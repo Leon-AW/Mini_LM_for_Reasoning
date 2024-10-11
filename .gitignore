@@ -1,0 +1,33 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment folders
+venv/
+env/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# PyTorch model checkpoints and saved models
+*.pt
+*.pth
+
+# Python specific cache files
+*.log
+*.sqlite3
+
+# Ignore dataset files (e.g., if you store training data locally)
+data/
+
+# Word2Vec model files (specific to your project)
+wikitext103_word2vec.model.syn1neg.npy
+wikitext103_word2vec.model.wv.vectors.npy
+
+# Colab-specific
+*/.colab/
