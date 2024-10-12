@@ -1,93 +1,88 @@
-import sys
-import os
-
-# Add the project root directory to the Python path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.append(project_root)
-
-from transformers import Trainer, TrainingArguments
-from models.reformer_model import ReformerWithCustomEmbeddings
-from utils.data_utils import load_dataset
 import torch
-from gensim.models import Word2Vec
+from torch.utils.data import Dataset, DataLoader
+from transformers import ReformerTokenizerFast, ReformerForMaskedLM, ReformerConfig, TrainingArguments, Trainer
+from datasets import load_dataset
+import numpy as np
+from sklearn.model_selection import train_test_split
+import logging
 
-class SimpleTokenizer:
-    def __init__(self, vocab):
-        self.vocab = vocab
-        self.unk_token = "<unk>"
-        self.pad_token = "<pad>"
-        self.eos_token = "</s>"
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-        # Add special tokens to the vocabulary
-        self.vocab[self.unk_token] = len(self.vocab)
-        self.vocab[self.pad_token] = len(self.vocab)
-        self.vocab[self.eos_token] = len(self.vocab)
+class WikiDataset(Dataset):
+    def __init__(self, tokenizer, file_path, block_size=128):
+        self.tokenizer = tokenizer
+        self.block_size = block_size
+        
+        logger.info(f"Loading data from {file_path}")
+        with open(file_path, 'r', encoding='utf-8') as f:
+            lines = [line for line in f.read().splitlines() if (len(line) > 0 and not line.isspace())]
+        
+        logger.info("Tokenizing data")
+        self.examples = tokenizer(lines, truncation=True, max_length=block_size, padding="max_length")
 
-    def encode(self, text, max_length=128):
-        tokens = text.split()  # Simple whitespace tokenizer
-        input_ids = [self.vocab.get(token, self.vocab[self.unk_token]) for token in tokens]
-        input_ids = input_ids[:max_length]  # Truncate to max_length
-        input_ids += [self.vocab[self.eos_token]]  # Add EOS token
-        input_ids += [self.vocab[self.pad_token]] * (max_length - len(input_ids))  # Pad to max_length
-        return torch.tensor(input_ids)
+    def __len__(self):
+        return len(self.examples['input_ids'])
 
-    def batch_encode(self, texts, max_length=128):
-        return [self.encode(text, max_length) for text in texts]
+    def __getitem__(self, i):
+        return {key: torch.tensor(val[i]) for key, val in self.examples.items()}
 
-def get_reformer_model():
-    # Load the trained Word2Vec model
-    word2vec_model = Word2Vec.load("embeddings/wikitext103_word2vec.model")
+def compute_metrics(eval_pred):
+    logits, labels = eval_pred
+    predictions = np.argmax(logits, axis=-1)
+    return {"accuracy": (predictions == labels).astype(np.float32).mean().item()}
 
-    # Create an embedding matrix
-    vocab = word2vec_model.wv.key_to_index
-    embedding_dim = word2vec_model.vector_size
-    embedding_matrix = torch.zeros((len(vocab), embedding_dim))
-
-    for word, idx in vocab.items():
-        embedding_matrix[idx] = torch.tensor(word2vec_model.wv[word])
-
-    # Initialize the Reformer model with custom embeddings
-    model = ReformerWithCustomEmbeddings(len(vocab), embedding_dim, embedding_matrix)
-    return model
-
-def train():
-    # Check if GPU is available and set device
+def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using device: {device}")
+    logger.info(f"Using device: {device}")
 
-    model = get_reformer_model().to(device)  # Move model to GPU if available
+    logger.info("Initializing tokenizer and model")
+    tokenizer = ReformerTokenizerFast.from_pretrained("google/reformer-crime-and-punishment")
+    
+    # Konfiguration für das Masked Language Model sicherstellen
+    config = ReformerConfig.from_pretrained("google/reformer-crime-and-punishment")
+    config.is_decoder = False  # Sicherstellen, dass is_decoder=False gesetzt ist
+    
+    model = ReformerForMaskedLM.from_pretrained("google/reformer-crime-and-punishment", config=config).to(device)
 
-    # Initialize the custom tokenizer
-    word2vec_model = Word2Vec.load("embeddings/wikitext103_word2vec.model")
-    vocab = word2vec_model.wv.key_to_index
-    tokenizer = SimpleTokenizer(vocab)
+    logger.info("Loading and splitting dataset")
+    full_dataset = WikiDataset(tokenizer, "data/raw/wiki.train.tokens")
+    train_size = int(0.9 * len(full_dataset))
+    val_size = len(full_dataset) - train_size
+    train_dataset, val_dataset = torch.utils.data.random_split(full_dataset, [train_size, val_size])
 
-    train_dataset, val_dataset = load_dataset(tokenizer)
-
+    logger.info("Defining training arguments")
     training_args = TrainingArguments(
-        output_dir='./results',
+        output_dir="./results",
         num_train_epochs=3,
-        per_device_train_batch_size=4,
-        save_steps=10_000,
-        save_total_limit=2,
-        evaluation_strategy="steps",
-        eval_steps=5000,
+        per_device_train_batch_size=8,
+        per_device_eval_batch_size=8,
+        warmup_steps=500,
+        weight_decay=0.01,
         logging_dir='./logs',
-        logging_steps=500,
-        logging_strategy="steps",  # Log at each step
-        logging_first_step=True,   # Log the first step
-        report_to="all",           # Report to all available integrations (e.g., console, TensorBoard)
-        load_best_model_at_end=True,  # Load the best model at the end of training
+        logging_steps=100,
+        evaluation_strategy="steps",
+        eval_steps=500,
+        save_steps=1000,
+        save_total_limit=2,
+        load_best_model_at_end=True,
     )
 
+    logger.info("Initializing trainer")
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=val_dataset,
+        compute_metrics=compute_metrics,
     )
 
+    logger.info("Starting training")
     trainer.train()
 
+    logger.info("Saving model and tokenizer")
+    model.save_pretrained("./reformer-wiki")
+    tokenizer.save_pretrained("./reformer-wiki")
+
 if __name__ == "__main__":
-    train()
+    main()

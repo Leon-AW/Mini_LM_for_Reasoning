@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from transformers import ReformerConfig, ReformerModel
+from transformers import ReformerConfig, ReformerModel, ReformerForMaskedLM
 import os
 from gensim.models import Word2Vec
 
@@ -20,16 +20,14 @@ for word, idx in vocab.items():
 
 # Define the model with the pre-trained embeddings
 class ReformerWithCustomEmbeddings(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, pretrained_embeddings):
+    def __init__(self, config, pretrained_embeddings):
         super(ReformerWithCustomEmbeddings, self).__init__()
         self.embedding = nn.Embedding.from_pretrained(pretrained_embeddings, freeze=False)
-        config = ReformerConfig(vocab_size=vocab_size)
-        self.reformer = ReformerModel(config)
+        self.reformer = ReformerForMaskedLM(config)
+        
+        # Replace the reformer's word embeddings with our custom embeddings
+        self.reformer.set_input_embeddings(self.embedding)
 
-    def forward(self, input_ids):
-        embeddings = self.embedding(input_ids)
-        outputs = self.reformer(inputs_embeds=embeddings)
+    def forward(self, input_ids, attention_mask=None, labels=None):
+        outputs = self.reformer(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
         return outputs
-
-# Initialize the model
-model = ReformerWithCustomEmbeddings(len(vocab), embedding_dim, embedding_matrix)

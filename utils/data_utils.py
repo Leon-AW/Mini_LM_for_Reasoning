@@ -13,25 +13,19 @@ class TextDataset(Dataset):
 
     def __getitem__(self, idx):
         text = self.texts[idx]
-        inputs = self.tokenizer(
-            text,
-            max_length=self.max_length,
-            padding='max_length',
-            truncation=True,
-            return_tensors='pt'
-        )
+        # Use the encode method of SimpleTokenizer
+        input_ids = self.tokenizer.encode(text, max_length=self.max_length)
         return {
-            'input_ids': inputs['input_ids'].squeeze(),
-            'attention_mask': inputs['attention_mask'].squeeze()
+            'input_ids': input_ids,
+            'attention_mask': torch.ones_like(input_ids)  # Assuming all tokens are attended to
         }
 
 def load_dataset(tokenizer, max_length=128):
-    # Example texts, replace with actual data loading
-    train_texts = ["Example sentence 1", "Example sentence 2"]
-    val_texts = ["Validation sentence 1", "Validation sentence 2"]
+    # Load your actual data here
+    train_texts = ["Your training sentence 1", "Your training sentence 2"]  # Replace with actual data
+    val_texts = ["Your validation sentence 1", "Your validation sentence 2"]  # Replace with actual data
 
     train_dataset = TextDataset(train_texts, tokenizer, max_length)
     val_dataset = TextDataset(val_texts, tokenizer, max_length)
 
     return train_dataset, val_dataset
-
