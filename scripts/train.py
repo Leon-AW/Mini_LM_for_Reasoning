@@ -29,7 +29,12 @@ class WikiDataset(Dataset):
         return len(self.examples['input_ids'])
 
     def __getitem__(self, i):
-        return {key: torch.tensor(val[i]) for key, val in self.examples.items()}
+        # Return input_ids and labels (which are the same for masked language modeling)
+        return {
+            'input_ids': torch.tensor(self.examples['input_ids'][i]),
+            'attention_mask': torch.tensor(self.examples['attention_mask'][i]),
+            'labels': torch.tensor(self.examples['input_ids'][i])  # Use input_ids as labels for MLM
+        }
 
 def compute_metrics(eval_pred):
     logits, labels = eval_pred
@@ -52,14 +57,11 @@ def main():
     # **WICHTIG:** Anpassen der axial_pos_shape
     config.axial_pos_shape = (16, 8)  # 16 * 8 = 128, passend zur block_size
 
-    # **WICHTIG:** Ignorieren von Größeninkongruenzen
     model = ReformerForMaskedLM.from_pretrained(
-        "google/reformer-crime-and-punishment",
+        "google/reformer-crime-and-punishment", 
         config=config,
-        ignore_mismatched_sizes=True  # Neu hinzugefügt
+        ignore_mismatched_sizes=True  # Add this parameter
     ).to(device)
-    
-    # Anpassung der Token-Embeddings nach dem Hinzufügen von `pad_token`
     model.resize_token_embeddings(len(tokenizer))
 
     logger.info("Loading and splitting dataset")
