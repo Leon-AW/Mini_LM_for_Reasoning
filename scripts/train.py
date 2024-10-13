@@ -39,11 +39,17 @@ def main():
     logger.info("Initializing tokenizer and model")
     tokenizer = ReformerTokenizerFast.from_pretrained("google/reformer-crime-and-punishment")
     
-    # Konfiguration für das Masked Language Model sicherstellen
+    # Überprüfen, ob ein Padding-Token vorhanden ist, und ggf. hinzufügen
+    if tokenizer.pad_token is None:
+        tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+
     config = ReformerConfig.from_pretrained("google/reformer-crime-and-punishment")
     config.is_decoder = False  # Sicherstellen, dass is_decoder=False gesetzt ist
     
     model = ReformerForMaskedLM.from_pretrained("google/reformer-crime-and-punishment", config=config).to(device)
+    
+    # Modell anpassen, um den neuen Padding-Token zu verwenden
+    model.resize_token_embeddings(len(tokenizer))
 
     logger.info("Loading and splitting dataset")
     full_dataset = WikiDataset(tokenizer, "data/raw/wiki.train.tokens")
