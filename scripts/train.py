@@ -45,11 +45,13 @@ def main():
     
     if tokenizer.pad_token is None:
         tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-
+    
     config = ReformerConfig.from_pretrained("google/reformer-crime-and-punishment")
     config.is_decoder = False
-    config.axial_pos_shape = (8, 16)  # Anpassung der axial_pos_shape für eine Sequenzlänge von 128
     
+    # **WICHTIG:** Anpassen der axial_pos_shape
+    config.axial_pos_shape = (16, 8)  # 16 * 8 = 128, passend zur block_size
+
     model = ReformerForMaskedLM.from_pretrained("google/reformer-crime-and-punishment", config=config).to(device)
     model.resize_token_embeddings(len(tokenizer))
 
@@ -74,7 +76,7 @@ def main():
         save_steps=1000,
         save_total_limit=2,
         load_best_model_at_end=True,
-        gradient_accumulation_steps=4,  # Beibehaltung der Gradientennakkumulation
+        gradient_accumulation_steps=4,  # Beibehaltung der Gradientenakkumulation
     )
 
     logger.info("Initializing trainer")
