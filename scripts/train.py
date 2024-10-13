@@ -52,7 +52,14 @@ def main():
     # **WICHTIG:** Anpassen der axial_pos_shape
     config.axial_pos_shape = (16, 8)  # 16 * 8 = 128, passend zur block_size
 
-    model = ReformerForMaskedLM.from_pretrained("google/reformer-crime-and-punishment", config=config).to(device)
+    # **WICHTIG:** Ignorieren von Größeninkongruenzen
+    model = ReformerForMaskedLM.from_pretrained(
+        "google/reformer-crime-and-punishment",
+        config=config,
+        ignore_mismatched_sizes=True  # Neu hinzugefügt
+    ).to(device)
+    
+    # Anpassung der Token-Embeddings nach dem Hinzufügen von `pad_token`
     model.resize_token_embeddings(len(tokenizer))
 
     logger.info("Loading and splitting dataset")
