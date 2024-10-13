@@ -5,6 +5,7 @@ from datasets import load_dataset
 import numpy as np
 from sklearn.model_selection import train_test_split
 import logging
+from typing import Optional
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -40,6 +41,13 @@ def compute_metrics(eval_pred):
     logits, labels = eval_pred
     predictions = np.argmax(logits, axis=-1)
     return {"accuracy": (predictions == labels).astype(np.float32).mean().item()}
+
+class CustomTrainer(Trainer):
+    def save_model(self, output_dir: Optional[str] = None, _internal_call: bool = False):
+        # Ensure all model parameters are contiguous before saving
+        for param in self.model.parameters():
+            param.data = param.data.contiguous()
+        super().save_model(output_dir, _internal_call)
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -89,7 +97,7 @@ def main():
     )
 
     logger.info("Initializing trainer")
-    trainer = Trainer(
+    trainer = CustomTrainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
