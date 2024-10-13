@@ -1,30 +1,33 @@
 import torch
 from transformers import ReformerTokenizerFast, ReformerForMaskedLM
 
-def test_model(input_text):
+def test_model():
     # Load the tokenizer and model
     tokenizer = ReformerTokenizerFast.from_pretrained("./reformer-wiki")
     model = ReformerForMaskedLM.from_pretrained("./reformer-wiki")
     model.eval()  # Set the model to evaluation mode
 
-    # Tokenize the input text
-    inputs = tokenizer(input_text, return_tensors="pt")
+    while True:
+        # Get user input
+        input_text = input("Enter a sentence with a [MASK] token (or 'exit' to quit): ")
+        if input_text.lower() == 'exit':
+            break
 
-    # Generate predictions
-    with torch.no_grad():
-        outputs = model(**inputs)
-        logits = outputs.logits
+        # Tokenize the input text
+        inputs = tokenizer(input_text, return_tensors="pt")
 
-    # Get the predicted token IDs
-    predicted_token_ids = torch.argmax(logits, dim=-1)
+        # Generate predictions
+        with torch.no_grad():
+            outputs = model(**inputs)
+            logits = outputs.logits
 
-    # Decode the predicted tokens to text
-    predicted_text = tokenizer.decode(predicted_token_ids[0], skip_special_tokens=True)
+        # Get the predicted token IDs
+        predicted_token_ids = torch.argmax(logits, dim=-1)
 
-    return predicted_text
+        # Decode the predicted tokens to text
+        predicted_text = tokenizer.decode(predicted_token_ids[0], skip_special_tokens=True)
 
-# Example usage
-input_text = "The quick brown fox jumps over the lazy [MASK]."
-predicted_text = test_model(input_text)
-print(f"Input: {input_text}")
-print(f"Predicted: {predicted_text}")
+        print(f"Predicted: {predicted_text}")
+
+# Run the test model function
+test_model()
