@@ -61,19 +61,17 @@ def main():
     
     config = ReformerConfig.from_pretrained("google/reformer-crime-and-punishment")
     config.is_decoder = False
-    
-    # **WICHTIG:** Anpassen der axial_pos_shape
-    config.axial_pos_shape = (16, 8)  # 16 * 8 = 128, passend zur block_size
+    config.axial_pos_shape = (16, 8)  # Adjusted for block_size
 
     model = ReformerForMaskedLM.from_pretrained(
         "google/reformer-crime-and-punishment", 
         config=config,
-        ignore_mismatched_sizes=True  # Add this parameter
+        ignore_mismatched_sizes=True
     ).to(device)
     model.resize_token_embeddings(len(tokenizer))
 
     logger.info("Loading and splitting dataset")
-    full_dataset = WikiDataset(tokenizer, "data/raw/wiki.train.tokens", max_size=1000)  # Weiter reduzierte Größe
+    full_dataset = WikiDataset(tokenizer, "data/raw/wiki.train.tokens", max_size=10000)  # Increase dataset size
     train_size = int(0.9 * len(full_dataset))
     val_size = len(full_dataset) - train_size
     train_dataset, val_dataset = torch.utils.data.random_split(full_dataset, [train_size, val_size])
@@ -81,10 +79,10 @@ def main():
     logger.info("Defining training arguments")
     training_args = TrainingArguments(
         output_dir="./results",
-        num_train_epochs=3,
-        per_device_train_batch_size=2,  # Weiter reduzierte Batch-Größe
-        per_device_eval_batch_size=2,   
-        warmup_steps=500,
+        num_train_epochs=10,  # Increase number of epochs
+        per_device_train_batch_size=8,  # Adjust batch size
+        per_device_eval_batch_size=8,
+        warmup_steps=1000,  # Adjust warmup steps
         weight_decay=0.01,
         logging_dir='./logs',
         logging_steps=100,
@@ -93,7 +91,8 @@ def main():
         save_steps=1000,
         save_total_limit=2,
         load_best_model_at_end=True,
-        gradient_accumulation_steps=4,  # Beibehaltung der Gradientenakkumulation
+        gradient_accumulation_steps=2,  # Adjust gradient accumulation
+        learning_rate=5e-5,  # Adjust learning rate
     )
 
     logger.info("Initializing trainer")
