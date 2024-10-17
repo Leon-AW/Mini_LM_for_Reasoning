@@ -16,13 +16,18 @@ def test_model():
         # Tokenize the input text
         inputs = tokenizer(input_text, return_tensors="pt")
 
+        # Check if the mask token is in the input
+        if tokenizer.mask_token_id not in inputs["input_ids"]:
+            print("Error: The input must contain a [MASK] token.")
+            continue
+
         # Generate predictions
         with torch.no_grad():
             outputs = model(**inputs)
             logits = outputs.logits
 
         # Get the predicted token IDs for the masked position
-        mask_token_index = torch.where(inputs["input_ids"] == tokenizer.mask_token_id)[1]
+        mask_token_index = (inputs["input_ids"] == tokenizer.mask_token_id).nonzero(as_tuple=True)[1]
         predicted_token_ids = logits[0, mask_token_index, :].argmax(dim=-1)
 
         # Decode the predicted tokens to text
