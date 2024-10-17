@@ -41,9 +41,14 @@ training_args = TrainingArguments(
 def data_collator(features):
     print("Features received by data collator:", features)  # Debugging print statement
     # Ensure that each feature is a dictionary with 'input_ids' and 'attention_mask'
-    input_ids = torch.stack([f['input_ids'].squeeze() for f in features])
-    attention_mask = torch.stack([f['attention_mask'].squeeze() for f in features])
-    labels = input_ids.clone()  # Clone input_ids for labels
+    try:
+        input_ids = torch.stack([f['input_ids'].squeeze() for f in features])
+        attention_mask = torch.stack([f['attention_mask'].squeeze() for f in features])
+        labels = input_ids.clone()  # Clone input_ids for labels
+    except KeyError as e:
+        print(f"KeyError in data collator: {e}")
+        print("Feature keys:", [f.keys() for f in features])
+        raise
 
     print("Data collator output:", {'input_ids': input_ids, 'attention_mask': attention_mask, 'labels': labels})  # Debugging print statement
     return {'input_ids': input_ids, 'attention_mask': attention_mask, 'labels': labels}
