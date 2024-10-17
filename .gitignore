@@ -28,6 +28,9 @@ data/
 #ignore wandb
 wadb/
 
+# Ignore reformer-wiki
+reformer-wiki/
+
 # Word2Vec model files (specific to your project)
 wikitext103_word2vec.model.syn1neg.npy
 wikitext103_word2vec.model.wv.vectors.npy

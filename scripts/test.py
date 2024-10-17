@@ -21,13 +21,14 @@ def test_model():
             outputs = model(**inputs)
             logits = outputs.logits
 
-        # Get the predicted token IDs
-        predicted_token_ids = torch.argmax(logits, dim=-1)
+        # Get the predicted token IDs for the masked position
+        mask_token_index = torch.where(inputs["input_ids"] == tokenizer.mask_token_id)[1]
+        predicted_token_ids = logits[0, mask_token_index, :].argmax(dim=-1)
 
         # Decode the predicted tokens to text
-        predicted_text = tokenizer.decode(predicted_token_ids[0], skip_special_tokens=True)
+        predicted_tokens = tokenizer.decode(predicted_token_ids, skip_special_tokens=True)
 
-        print(f"Predicted: {predicted_text}")
+        print(f"Predicted: {predicted_tokens}")
 
 # Run the test model function
 test_model()
