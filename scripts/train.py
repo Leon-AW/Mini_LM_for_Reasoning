@@ -79,7 +79,7 @@ def main():
     logger.info("Defining training arguments")
     training_args = TrainingArguments(
         output_dir="./results",
-        num_train_epochs=10,  # Increase number of epochs
+        num_train_epochs=3,  # Increase number of epochs
         per_device_train_batch_size=8,  # Adjust batch size
         per_device_eval_batch_size=8,
         warmup_steps=1000,  # Adjust warmup steps
