@@ -37,9 +37,12 @@ training_args = TrainingArguments(
 
 # Define a simple data collator
 def data_collator(features):
-    return {'input_ids': torch.stack([f['input_ids'] for f in features]),
-            'attention_mask': torch.stack([f['attention_mask'] for f in features]),
-            'labels': torch.stack([f['input_ids'] for f in features])}
+    # Ensure that each feature is a dictionary with 'input_ids' and 'attention_mask'
+    input_ids = torch.stack([f['input_ids'].squeeze() for f in features])
+    attention_mask = torch.stack([f['attention_mask'].squeeze() for f in features])
+    labels = input_ids.clone()  # Clone input_ids for labels
+
+    return {'input_ids': input_ids, 'attention_mask': attention_mask, 'labels': labels}
 
 # Initialize Trainer
 trainer = Trainer(
