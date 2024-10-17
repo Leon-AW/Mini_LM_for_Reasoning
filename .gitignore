@@ -35,6 +35,9 @@ reformer-wiki-100k/
 # Ignore model cache
 model_cache/
 
+# Ignore mini_lm
+mini_lm/
+
 # Word2Vec model files (specific to your project)
 wikitext103_word2vec.model.syn1neg.npy
 wikitext103_word2vec.model.wv.vectors.npy
