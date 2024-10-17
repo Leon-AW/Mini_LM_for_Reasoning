@@ -1,17 +1,44 @@
 # Import necessary libraries
 import torch
 from transformers import GPT2Tokenizer, GPT2LMHeadModel, Trainer, TrainingArguments
+from torch.utils.data import Dataset
+import os
 
 # Check for GPU availability
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
-# Load tokenizer and model
-tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
-model = GPT2LMHeadModel.from_pretrained('gpt2').to(device)
+# Set up cache directory
+cache_dir = "./model_cache"
+os.makedirs(cache_dir, exist_ok=True)
+
+# Load tokenizer and model with explicit cache directory
+try:
+    tokenizer = GPT2Tokenizer.from_pretrained('gpt2', cache_dir=cache_dir)
+    model = GPT2LMHeadModel.from_pretrained('gpt2', cache_dir=cache_dir).to(device)
+except Exception as e:
+    print(f"Error loading model or tokenizer: {e}")
+    print("Attempting to download manually...")
+    # If loading fails, try to manually download
+    from transformers import AutoTokenizer, AutoModelForCausalLM
+    tokenizer = AutoTokenizer.from_pretrained("gpt2", cache_dir=cache_dir, use_fast=False)
+    model = AutoModelForCausalLM.from_pretrained("gpt2", cache_dir=cache_dir)
 
 # Set the pad_token to eos_token
 tokenizer.pad_token = tokenizer.eos_token
+
+# Custom Dataset class
+class TextDataset(Dataset):
+    def __init__(self, encodings):
+        self.encodings = encodings
+
+    def __getitem__(self, idx):
+        item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
+        item['labels'] = item['input_ids'].clone()
+        return item
+
+    def __len__(self):
+        return len(self.encodings['input_ids'])
 
 # Preprocess your data
 def preprocess_data(file_path):
@@ -19,10 +46,10 @@ def preprocess_data(file_path):
         text = f.read()
     tokenized_data = tokenizer(text, return_tensors='pt', max_length=512, truncation=True, padding='max_length')
     print("Tokenized data structure:", tokenized_data)  # Debugging print statement
-    return tokenized_data
+    return TextDataset(tokenized_data)
 
 # Load and preprocess the dataset
-train_data = preprocess_data('data/raw/wiki.train.tokens')
+train_dataset = preprocess_data('data/raw/wiki.train.tokens')
 
 # Define training arguments with TensorBoard logging
 training_args = TrainingArguments(
@@ -39,25 +66,13 @@ training_args = TrainingArguments(
 
 # Define a simple data collator
 def data_collator(features):
-    print("Features received by data collator:", features)  # Debugging print statement
-    # Ensure that each feature is a dictionary with 'input_ids' and 'attention_mask'
-    try:
-        input_ids = torch.stack([f['input_ids'].squeeze() for f in features])
-        attention_mask = torch.stack([f['attention_mask'].squeeze() for f in features])
-        labels = input_ids.clone()  # Clone input_ids for labels
-    except KeyError as e:
-        print(f"KeyError in data collator: {e}")
-        print("Feature keys:", [f.keys() for f in features])
-        raise
-
-    print("Data collator output:", {'input_ids': input_ids, 'attention_mask': attention_mask, 'labels': labels})  # Debugging print statement
-    return {'input_ids': input_ids, 'attention_mask': attention_mask, 'labels': labels}
+    return {key: torch.stack([f[key] for f in features]) for key in features[0].keys()}
 
 # Initialize Trainer
 trainer = Trainer(
     model=model,
     args=training_args,
-    train_dataset=train_data,
+    train_dataset=train_dataset,
     data_collator=data_collator
 )
 
