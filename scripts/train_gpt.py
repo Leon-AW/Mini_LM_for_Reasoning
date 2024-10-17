@@ -17,7 +17,9 @@ tokenizer.pad_token = tokenizer.eos_token
 def preprocess_data(file_path):
     with open(file_path, 'r') as f:
         text = f.read()
-    return tokenizer(text, return_tensors='pt', max_length=512, truncation=True, padding='max_length')
+    tokenized_data = tokenizer(text, return_tensors='pt', max_length=512, truncation=True, padding='max_length')
+    print("Tokenized data structure:", tokenized_data)  # Debugging print statement
+    return tokenized_data
 
 # Load and preprocess the dataset
 train_data = preprocess_data('data/raw/wiki.train.tokens')
@@ -37,11 +39,13 @@ training_args = TrainingArguments(
 
 # Define a simple data collator
 def data_collator(features):
+    print("Features received by data collator:", features)  # Debugging print statement
     # Ensure that each feature is a dictionary with 'input_ids' and 'attention_mask'
     input_ids = torch.stack([f['input_ids'].squeeze() for f in features])
     attention_mask = torch.stack([f['attention_mask'].squeeze() for f in features])
     labels = input_ids.clone()  # Clone input_ids for labels
 
+    print("Data collator output:", {'input_ids': input_ids, 'attention_mask': attention_mask, 'labels': labels})  # Debugging print statement
     return {'input_ids': input_ids, 'attention_mask': attention_mask, 'labels': labels}
 
 # Initialize Trainer
