@@ -6,6 +6,9 @@ from transformers import GPT2Tokenizer, GPT2LMHeadModel, Trainer, TrainingArgume
 tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
 model = GPT2LMHeadModel.from_pretrained('gpt2')
 
+# Set the pad_token to eos_token
+tokenizer.pad_token = tokenizer.eos_token
+
 # Preprocess your data
 def preprocess_data(file_path):
     with open(file_path, 'r') as f:
