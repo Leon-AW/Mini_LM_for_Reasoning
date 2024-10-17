@@ -71,7 +71,7 @@ def main():
     model.resize_token_embeddings(len(tokenizer))
 
     logger.info("Loading and splitting dataset")
-    full_dataset = WikiDataset(tokenizer, "data/raw/wiki.train.tokens")  # Remove max_size to use full dataset
+    full_dataset = WikiDataset(tokenizer, "data/raw/wiki.train.tokens", max_size=100000)  # Increase dataset size
     train_size = int(0.9 * len(full_dataset))
     val_size = len(full_dataset) - train_size
     train_dataset, val_dataset = torch.utils.data.random_split(full_dataset, [train_size, val_size])
