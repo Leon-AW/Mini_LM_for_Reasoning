@@ -18,7 +18,7 @@ def preprocess_data(file_path):
 # Load and preprocess the dataset
 train_data = preprocess_data('data/raw/wiki.train.tokens')
 
-# Define training arguments with optimizations
+# Define training arguments with TensorBoard logging
 training_args = TrainingArguments(
     output_dir='./results',
     num_train_epochs=3,
@@ -27,6 +27,8 @@ training_args = TrainingArguments(
     fp16=True,  # Enable mixed precision training
     save_steps=10_000,
     save_total_limit=2,
+    logging_dir='./logs',  # Directory for storing logs
+    logging_steps=500,  # Log every 500 steps
 )
 
 # Define a simple data collator
