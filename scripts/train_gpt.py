@@ -18,11 +18,13 @@ def preprocess_data(file_path):
 # Load and preprocess the dataset
 train_data = preprocess_data('data/raw/wiki.train.tokens')
 
-# Define training arguments
+# Define training arguments with optimizations
 training_args = TrainingArguments(
     output_dir='./results',
     num_train_epochs=3,
-    per_device_train_batch_size=2,
+    per_device_train_batch_size=1,  # Reduce batch size
+    gradient_accumulation_steps=4,  # Accumulate gradients
+    fp16=True,  # Enable mixed precision training
     save_steps=10_000,
     save_total_limit=2,
 )

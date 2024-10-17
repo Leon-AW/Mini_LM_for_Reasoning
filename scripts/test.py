@@ -3,8 +3,8 @@ from transformers import ReformerTokenizerFast, ReformerForMaskedLM
 
 def test_model(input_text):
     # Load the tokenizer and model
-    tokenizer = ReformerTokenizerFast.from_pretrained("./reformer-wiki")
-    model = ReformerForMaskedLM.from_pretrained("./reformer-wiki")
+    tokenizer = ReformerTokenizerFast.from_pretrained("./reformer-wiki-100k")
+    model = ReformerForMaskedLM.from_pretrained("./reformer-wiki-100k")
     model.eval()  # Set the model to evaluation mode
 
     # Tokenize the input text
