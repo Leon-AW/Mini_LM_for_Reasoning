@@ -1,6 +1,6 @@
 # Import necessary libraries
 import torch
-from transformers import GPT2Tokenizer, GPT2LMHeadModel, Trainer, TrainingArguments
+from transformers import GPT2Tokenizer, GPT2LMHeadModel, Trainer, TrainingArguments, DataCollatorForLanguageModeling
 from torch.utils.data import Dataset
 import os
 
@@ -24,32 +24,35 @@ except Exception as e:
     tokenizer = AutoTokenizer.from_pretrained("gpt2", cache_dir=cache_dir, use_fast=False)
     model = AutoModelForCausalLM.from_pretrained("gpt2", cache_dir=cache_dir)
 
+# Increase the model's maximum sequence length
+model.config.max_position_embeddings = 2048  # or any larger value you need
+model.resize_token_embeddings(len(tokenizer))
+
 # Set the pad_token to eos_token
 tokenizer.pad_token = tokenizer.eos_token
 
 # Custom Dataset class
 class TextDataset(Dataset):
-    def __init__(self, encodings):
-        self.encodings = encodings
+    def __init__(self, tokenizer, file_path, block_size):
+        with open(file_path, 'r', encoding='utf-8') as f:
+            lines = f.read().splitlines()
 
-    def __getitem__(self, idx):
-        item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
-        item['labels'] = item['input_ids'].clone()
-        return item
+        self.examples = []
+        for line in lines:
+            tokenized_text = tokenizer.encode(line)
+            for i in range(0, len(tokenized_text) - block_size + 1, block_size):
+                self.examples.append(tokenized_text[i:i + block_size])
 
     def __len__(self):
-        return len(self.encodings['input_ids'])
+        return len(self.examples)
 
-# Preprocess your data
-def preprocess_data(file_path):
-    with open(file_path, 'r') as f:
-        text = f.read()
-    tokenized_data = tokenizer(text, return_tensors='pt', max_length=512, truncation=True, padding='max_length')
-    print("Tokenized data structure:", tokenized_data)  # Debugging print statement
-    return TextDataset(tokenized_data)
+    def __getitem__(self, i):
+        return torch.tensor(self.examples[i], dtype=torch.long)
 
 # Load and preprocess the dataset
-train_dataset = preprocess_data('data/raw/wiki.train.tokens')
+train_dataset = TextDataset(tokenizer, 'data/raw/wiki.train.tokens', block_size=1024)
+
+print(f"Number of training examples: {len(train_dataset)}")
 
 # Define training arguments with TensorBoard logging
 training_args = TrainingArguments(
@@ -64,9 +67,10 @@ training_args = TrainingArguments(
     logging_steps=500,  # Log every 500 steps
 )
 
-# Define a simple data collator
-def data_collator(features):
-    return {key: torch.stack([f[key] for f in features]) for key in features[0].keys()}
+# Use DataCollatorForLanguageModeling for dynamic padding
+data_collator = DataCollatorForLanguageModeling(
+    tokenizer=tokenizer, mlm=False
+)
 
 # Initialize Trainer
 trainer = Trainer(
